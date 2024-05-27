@@ -1,0 +1,605 @@
+---
+title: "DataScience_Workshop3-4"
+author: "Ellana Pierce"
+date: "2024-05-26"
+output: html_document
+---
+
+
+Workshop 3 - Data wrangling in R
+
+4.1 Workshop overview: 
+We will learn how to take tabluar data and prepare it for use in plotting, fitting statistical modelling and summarising it to better understand pattens in our data.
+
+4.3 Tidying data using Tidyr
+Let's organise some data!
+```{r}
+library(tidyverse)
+```
+4.4 Tidy data
+Sometimes, we are given data that is not easy for an analysis. 
+The form of the data may be inconvenient for data collection/entry... but! We can rearrange the data to a format more appropriate for analysis. This process is called "tidying".
+
+```{r}
+table1
+#> # A tibble: 6 × 4
+#>   country      year  cases population
+#>   <chr>       <int>  <int>      <int>
+#> 1 Afghanistan  1999    745   19987071
+#> 2 Afghanistan  2000   2666   20595360
+#> 3 Brazil       1999  37737  172006362
+#> 4 Brazil       2000  80488  174504898
+#> 5 China        1999 212258 1272915272
+#> 6 China        2000 213766 1280428583
+table2
+#> # A tibble: 12 × 4
+#>   country      year type           count
+#>   <chr>       <int> <chr>          <int>
+#> 1 Afghanistan  1999 cases            745
+#> 2 Afghanistan  1999 population  19987071
+#> 3 Afghanistan  2000 cases           2666
+#> 4 Afghanistan  2000 population  20595360
+#> 5 Brazil       1999 cases          37737
+#> 6 Brazil       1999 population 172006362
+#> # ... with 6 more rows
+table3
+#> # A tibble: 6 × 3
+#>   country      year rate             
+#> * <chr>       <int> <chr>            
+#> 1 Afghanistan  1999 745/19987071     
+#> 2 Afghanistan  2000 2666/20595360    
+#> 3 Brazil       1999 37737/172006362  
+#> 4 Brazil       2000 80488/174504898  
+#> 5 China        1999 212258/1272915272
+#> 6 China        2000 213766/1280428583
+```
+Each of these tables that we ust plotted, displays the same data set but on the first table (Table1) is in a tidy format. 
+The rules: 1. Each variable must have its own column.
+2. Each observation must have its own row.
+3. Each value must have its own cell.
+
+```{r}
+# Compute rate per 10,000
+table1 %>% 
+  mutate(rate = cases / population * 10000)
+#> # A tibble: 6 × 5
+#>   country      year  cases population  rate
+#>   <chr>       <int>  <int>      <int> <dbl>
+#> 1 Afghanistan  1999    745   19987071 0.373
+#> 2 Afghanistan  2000   2666   20595360 1.29 
+#> 3 Brazil       1999  37737  172006362 2.19 
+#> 4 Brazil       2000  80488  174504898 5.61 
+#> 5 China        1999 212258 1272915272 1.67 
+#> 6 China        2000 213766 1280428583 1.67
+
+# Compute cases per year
+table1 %>% 
+  count(year, wt = cases)
+#> # A tibble: 2 × 2
+#>    year      n
+#>   <int>  <int>
+#> 1  1999 250740
+#> 2  2000 296920
+
+# Visualise changes over time
+library(ggplot2)
+ggplot(table1, aes(year, cases)) + 
+  geom_line(aes(group = country), colour = "grey50") + 
+  geom_point(aes(colour = country))
+
+```
+
+Note: Understanding whether data frame structue is optimal (or in other words: Tidy) is a FUNDAMENTAL skill as a marine scientist. 
+
+```{r}
+billboard
+#> # A tibble: 317 × 79
+#>   artist       track               date.entered   wk1   wk2   wk3   wk4   wk5
+#>   <chr>        <chr>               <date>       <dbl> <dbl> <dbl> <dbl> <dbl>
+#> 1 2 Pac        Baby Don't Cry (Ke... 2000-02-26      87    82    72    77    87
+#> 2 2Ge+her      The Hardest Part O... 2000-09-02      91    87    92    NA    NA
+#> 3 3 Doors Down Kryptonite          2000-04-08      81    70    68    67    66
+#> 4 3 Doors Down Loser               2000-10-21      76    76    72    69    67
+#> 5 504 Boyz     Wobble Wobble       2000-04-15      57    34    25    17    17
+#> 6 98^0         Give Me Just One N... 2000-08-19      51    39    34    26    26
+#> # ℹ 311 more rows
+#> # ℹ 71 more variables: wk6 <dbl>, wk7 <dbl>, wk8 <dbl>, wk9 <dbl>, ...
+```
+ABSOLUTE  BANGERS....
+
+```{r}
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), 
+    names_to = "week", 
+    values_to = "rank"
+  )
+#> # A tibble: 24,092 × 5
+#>    artist track                   date.entered week   rank
+#>    <chr>  <chr>                   <date>       <chr> <dbl>
+#>  1 2 Pac  Baby Don't Cry (Keep... 2000-02-26   wk1      87
+#>  2 2 Pac  Baby Don't Cry (Keep... 2000-02-26   wk2      82
+#>  3 2 Pac  Baby Don't Cry (Keep... 2000-02-26   wk3      72
+#>  4 2 Pac  Baby Don't Cry (Keep... 2000-02-26   wk4      77
+#>  5 2 Pac  Baby Don't Cry (Keep... 2000-02-26   wk5      87
+#>  6 2 Pac  Baby Don't Cry (Keep... 2000-02-26   wk6      94
+#>  #> # ℹ 24,082 more rows
+```
+```{r}
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), 
+    names_to = "week", 
+    values_to = "rank",
+    values_drop_na = TRUE
+  )
+#> # A tibble: 5,307 × 5
+#>   artist track                   date.entered week   rank
+```
+
+
+df |> 
+  pivot_longer(
+    cols = bp1:bp2,
+    names_to = "measurement",
+    values_to = "value"
+  )
+#> # A tibble: 6 × 3
+#>   id    measurement value
+#>   <chr> <chr>       <dbl>
+#> 1 A     bp1           100
+#> 2 A     bp2           120
+#> 3 B     bp1           140
+#> 4 B     bp2           115
+#> 5 C     bp1           120
+#> 6 C     bp2           125
+
+```{r}
+df <- tribble(
+  ~id,  ~bp1, ~bp2,
+   "A",  100,  120,
+   "B",  140,  115,
+   "C",  120,  125
+)
+```
+
+
+```{r}
+df |> 
+  pivot_longer(
+    cols = bp1:bp2,
+    names_to = "measurement",
+    values_to = "value"
+  )
+#> # A tibble: 6 × 3
+#>   id    measurement value
+#>   <chr> <chr>       <dbl>
+#> 1 A     bp1           100
+#> 2 A     bp2           120
+#> 3 B     bp1           140
+#> 4 B     bp2           115
+#> 5 C     bp1           120
+#> 6 C     bp2           125
+```
+```{r}
+cms_patient_experience
+#> # A tibble: 500 × 5
+#>   org_pac_id org_nm                     measure_cd   measure_title   prf_rate
+#>   <chr>      <chr>                      <chr>        <chr>              <dbl>
+#> 1 0446157747 USC CARE MEDICAL GROUP INC CAHPS_GRP_1  CAHPS for MIPS...       63
+#> 2 0446157747 USC CARE MEDICAL GROUP INC CAHPS_GRP_2  CAHPS for MIPS...       87
+#> 3 0446157747 USC CARE MEDICAL GROUP INC CAHPS_GRP_3  CAHPS for MIPS...       86
+#> 4 0446157747 USC CARE MEDICAL GROUP INC CAHPS_GRP_5  CAHPS for MIPS...       57
+#> 5 0446157747 USC CARE MEDICAL GROUP INC CAHPS_GRP_8  CAHPS for MIPS...       85
+#> 6 0446157747 USC CARE MEDICAL GROUP INC CAHPS_GRP_12 CAHPS for MIPS...       24
+#> # ℹ 494 more rows
+```
+
+```{r}
+cms_patient_experience |> 
+  distinct(measure_cd, measure_title)
+#> # A tibble: 6 × 2
+#>   measure_cd   measure_title                                                 
+#>   <chr>        <chr>                                                         
+#> 1 CAHPS_GRP_1  CAHPS for MIPS SSM: Getting Timely Care, Appointments, and In...
+#> 2 CAHPS_GRP_2  CAHPS for MIPS SSM: How Well Providers Communicate            
+#> 3 CAHPS_GRP_3  CAHPS for MIPS SSM: Patient's Rating of Provider              
+#> 4 CAHPS_GRP_5  CAHPS for MIPS SSM: Health Promotion and Education            
+#> 5 CAHPS_GRP_8  CAHPS for MIPS SSM: Courteous and Helpful Office Staff        
+#> 6 CAHPS_GRP_12 CAHPS for MIPS SSM: Stewardship of Patient Resources
+```
+
+```{r}
+cms_patient_experience |> 
+  pivot_wider(
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+#> # A tibble: 500 × 9
+#>   org_pac_id org_nm                   measure_title   CAHPS_GRP_1 CAHPS_GRP_2
+#>   <chr>      <chr>                    <chr>                 <dbl>       <dbl>
+#> 1 0446157747 USC CARE MEDICAL GROUP ... CAHPS for MIPS...          63          NA
+#> 2 0446157747 USC CARE MEDICAL GROUP ... CAHPS for MIPS...          NA          87
+#> 3 0446157747 USC CARE MEDICAL GROUP ... CAHPS for MIPS...          NA          NA
+#> 4 0446157747 USC CARE MEDICAL GROUP ... CAHPS for MIPS...          NA          NA
+#> 5 0446157747 USC CARE MEDICAL GROUP ... CAHPS for MIPS...          NA          NA
+#> 6 0446157747 USC CARE MEDICAL GROUP ... CAHPS for MIPS...          NA          NA
+#> # ℹ 494 more rows
+#> # ℹ 4 more variables: CAHPS_GRP_3 <dbl>, CAHPS_GRP_5 <dbl>, ...
+```
+
+
+```{r}
+cms_patient_experience |> 
+  pivot_wider(
+    id_cols = starts_with("org"),
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+#> # A tibble: 95 × 8
+#>   org_pac_id org_nm           CAHPS_GRP_1 CAHPS_GRP_2 CAHPS_GRP_3 CAHPS_GRP_5
+#>   <chr>      <chr>                  <dbl>       <dbl>       <dbl>       <dbl>
+#> 1 0446157747 USC CARE MEDICA...          63          87          86          57
+#> 2 0446162697 ASSOCIATION OF ...          59          85          83          63
+#> 3 0547164295 BEAVER MEDICAL ...          49          NA          75          44
+#> 4 0749333730 CAPE PHYSICIANS...          67          84          85          65
+#> 5 0840104360 ALLIANCE PHYSIC...          66          87          87          64
+#> 6 0840109864 REX HOSPITAL INC          73          87          84          67
+#> # ℹ 89 more rows
+#> # ℹ 2 more variables: CAHPS_GRP_8 <dbl>, CAHPS_GRP_12 <dbl>
+```
+
+Now we've got the output we want!!!
+
+```{r}
+df <- tribble(
+  ~id, ~measurement, ~value,
+  "A",        "bp1",    100,
+  "B",        "bp1",    140,
+  "B",        "bp2",    115, 
+  "A",        "bp2",    120,
+  "A",        "bp3",    105
+)
+```
+This Pivot_wider function will be useful for us in the future, an important function to understand!
+```{r}
+df |> 
+  pivot_wider(
+    names_from = measurement,
+    values_from = value
+  )
+#> # A tibble: 2 × 4
+#>   id      bp1   bp2   bp3
+#>   <chr> <dbl> <dbl> <dbl>
+#> 1 A       100   120   105
+#> 2 B       140   115    NA
+```
+```{r}
+df |> 
+  distinct(measurement) |> 
+  pull()
+#> [1] "bp1" "bp2" "bp3"
+```
+```{r}
+df |> 
+  select(-measurement, -value) |> 
+  distinct()
+#> # A tibble: 2 × 1
+#>   id   
+#>   <chr>
+#> 1 A    
+#> 2 B
+```
+
+```{r}
+df |> 
+  select(-measurement, -value) |> 
+  distinct() |> 
+  mutate(x = NA, y = NA, z = NA)
+#> # A tibble: 2 × 4
+#>   id    x     y     z    
+#>   <chr> <lgl> <lgl> <lgl>
+#> 1 A     NA    NA    NA   
+#> 2 B     NA    NA    NA
+```
+Then, it fills all the missing values using the data in the input. 
+With what we're working on here, not every cell in the output has a correspobding value in the input as there's no third blood pressure measurement for the patient B, so that cell remains empty/missing.
+
+4.5.5 Exercises 
+1. Why are pivot_longer() and pivot_wider not perfectly symmetrical?
+Let's have a look with the below examples.
+```{r}
+stocks <- tibble(
+  year   = c(2015, 2015, 2016, 2016),
+  half  = c(   1,    2,     1,    2),
+  return = c(1.88, 0.59, 0.92, 0.17)
+)
+stocks %>% 
+  pivot_wider(names_from = year, values_from = return) %>% 
+  pivot_longer(`2015`:`2016`, names_to = "year", values_to = "return")
+
+
+# Pivot_longer() has a names_ptypes argument, e.g.  names_ptypes = list(year = double()). What does it do?
+```
+The variable types are character which is numeric (year).
+
+```{r}
+#names_ptypes
+```
+```{r}
+table4a %>% 
+  pivot_longer(c(1999, 2000), names_to = "year", values_to = "cases")
+#> Error in `pivot_longer()`:
+#> ! Can't subset columns past the end.
+#> ℹ Locations 1999 and 2000 don't exist.
+#> ℹ There are only 3 columns.
+```
+Why does the above code fail?
+The code fails because of the error of the script, asking R studio to make the columns longer, for years that aren't within the data set. Trying to call in something that doesn't exist within our data set, has given an error. Let's move forward:
+```{r}
+preg <- tribble(
+  ~pregnant, ~male, ~female,
+  "yes",     NA,    10,
+  "no",      20,    12
+)
+```
+
+```{r}
+table3
+#> # A tibble: 6 × 3
+#>   country      year rate             
+#> * <chr>       <int> <chr>            
+#> 1 Afghanistan  1999 745/19987071     
+#> 2 Afghanistan  2000 2666/20595360    
+#> 3 Brazil       1999 37737/172006362  
+#> 4 Brazil       2000 80488/174504898  
+#> 5 China        1999 212258/1272915272
+#> 6 China        2000 213766/1280428583
+table3 %>% 
+  separate(rate, into = c("cases", "population"))
+#> # A tibble: 6 × 4
+#>   country      year cases  population
+#>   <chr>       <int> <chr>  <chr>     
+#> 1 Afghanistan  1999 745    19987071  
+#> 2 Afghanistan  2000 2666   20595360  
+#> 3 Brazil       1999 37737  172006362 
+#> 4 Brazil       2000 80488  174504898 
+#> 5 China        1999 212258 1272915272
+#> 6 China        2000 213766 1280428583
+```
+```{r}
+table3 %>% 
+  separate(rate, into = c("cases", "population"), sep = "/")
+```
+Note: The data types in the tables above - both [cases] and [populations] are listed as character types (<chr>). Since the values in the columns are actually numbers, so we want to ask the function separate() to convert them to better types using convert = TRUE. Then they will be listed as integer types (<int>).
+
+```{r}
+table3 %>% 
+  separate(rate, into = c("cases", "population"), convert = TRUE)
+#> # A tibble: 6 × 4
+#>   country      year  cases population
+#>   <chr>       <int>  <int>      <int>
+#> 1 Afghanistan  1999    745   19987071
+#> 2 Afghanistan  2000   2666   20595360
+#> 3 Brazil       1999  37737  172006362
+#> 4 Brazil       2000  80488  174504898
+#> 5 China        1999 212258 1272915272
+#> 6 China        2000 213766 1280428583
+```
+cases & population now converted to integer. 
+
+Next, I also need to seperate the last two digits of each year. This will make my data less tidy but will come in handy soon. 
+```{r}
+table3 %>% 
+  separate(year, into = c("century", "year"), sep = 2)
+#> # A tibble: 6 × 4
+#>   country     century year  rate             
+#>   <chr>       <chr>   <chr> <chr>            
+#> 1 Afghanistan 19      99    745/19987071     
+#> 2 Afghanistan 20      00    2666/20595360    
+#> 3 Brazil      19      99    37737/172006362  
+#> 4 Brazil      20      00    80488/174504898  
+#> 5 China       19      99    212258/1272915272
+#> 6 China       20      00    213766/1280428583
+```
+Now, I want to combine multiple columns into a single column.
+```{r}
+table5 %>% 
+  unite(new, century, year, sep = "")
+#> # A tibble: 6 × 3
+#>   country     new   rate             
+#>   <chr>       <chr> <chr>            
+#> 1 Afghanistan 1999  745/19987071     
+#> 2 Afghanistan 2000  2666/20595360    
+#> 3 Brazil      1999  37737/172006362  
+#> 4 Brazil      2000  80488/174504898  
+#> 5 China       1999  212258/1272915272
+#> 6 China       2000  213766/1280428583
+
+
+```
+Now the year is back into the one column, looks good!
+I have had a lot of practice with missing values and NaN, and importing data     so will just skip pass that for now and move onto aspects I need to learn and practice more!
+
+Note: Page 78-94 done seperately as homework exercise.
+I will relate back to the skills worked on during these sections, for the assignment and Qfish analysis, later on!
+
+Workshop 4: Spatial Data in R
+Using GIS and R together! 
+
+We've got a loooooooong code already, so we'll jump straight into it: 
+Installing the packages we need and loading into our library.
+```{r}
+# install and load your packages
+install.packages("sf") 
+install.packages("terra")
+install.packages("tmap")
+
+
+#load into R library
+library(tidyverse)
+library(sf) # simple features
+library (terra) # for raster
+library(tmap) # Thematic maps are geographical maps in which spatial data distributions are visualized
+```
+
+```{r}
+remotes::install_github('r-tmap/tmap')
+```
+
+
+5.5 Introduction to the problem:
+A little bit of background....
+"You finally have a chance to meet one of your academic heroes. On meeting her, she mentions that she’s read your first PhD paper on zooplankton biogeography. She said she was particularly impressed with the extent of R analysis in your biogeography paper and goes on to suggest you collaborate on a new database she is ‘working with’.
+The database has extensive samples of copepod richness throughout Australia’s oceans and the Southern Ocean too. She has a hypothesis - that like many organisms, copepod species richness (which is the number of unique species) will be higher in warmer waters than cooler waters. But she needs help sorting out the data.
+First and foremost, she wants you to use your skills in R to help develop a map that could help you ‘get a look at’ whether this hypothesis is worth pursuing"
+
+I have downloaded the data that has a spreadsheet pf copepod species richness from around Aus. Copepods that are perhaps the most complex and abundant animal on earth are a type of zoo plankton, and play an important role in ocean food-webs.
+We're working with some hectic data (that also sounds pretty RAW and UNTIDY!)
+From a Continuous Plankton recorder (CPR) that is actually used in realo world studies for a lab in Bris. More on this here for later: Australian Plankton Survey: IMOS.org.au, https://imos.org.au/facilities/shipsofopportunity/auscontinuousplanktonrecorder/)
+
+There's 5 items in the zipped folder, but I have added them into my "UpdatedDataSci" folder so I'm not changing around my working directory for this section.
+
+```{r}
+#load the copepod data into R studio
+library(readr)
+dat <- read_csv("copepods_raw.csv")
+dat
+```
+Heck yeah! We have the data loaded in and looking as it should based on the reference of the workflow.
+
+5.7 Data Exploration
+Let's Familiarise ourself with the copepod data we have been given!
+
+```{r}
+library(ggplot2)
+ggplot(dat) + 
+  aes(x = longitude, y = latitude, color = richness_raw) +
+  geom_point()
+
+```
+Woah! This looks great but it's not yet an actual map. 
+We need to add the critical aspects that a map needs, like the real distances between points (projection.)
+
+Let's have a loo at the richness data: The main variable we will be looking at within the data. We will create a point plot with latitude on the x-axis and richness on the y-axis.
+```{r}
+ggplot(dat, aes(x = latitude, y = richness_raw)) + 
+  stat_smooth() + 
+  geom_point()
+```
+I can definitely notice it looks a little odd in my plot. 
+There is a really clear change around the -40 latitude point.... This is a good example of visualising the data in plots to see how it looks. If we were using this data to actually get results that we may be sharing/publishing - then we would be checking the reasoning for this with our collaborator.
+
+Next: Let's turn the data set into a 'simple features collection'. 
+I hadn't downloaded the package yet so lets do that and then turn the data into sdat.
+```{r}
+install.packages('sf')
+```
+
+```{r Bring in package for use}
+library(sf)
+```
+
+```{r}
+sdat <- st_as_sf(dat, coords = c("longitude", "latitude"), 
+                 crs = 4326)
+```
+5.9 Coordinate reference system
+I'm familiar with these, so will jump straight into it!
+```{r CRS}
+crs4326 <- st_crs(4326)
+crs4326 # look at the whole CRS
+crs4326$Name # pull out just the name of the crs
+# [1] "WGS 84"
+```
+```{r}
+crs4326$wkt # crs in well-known text format
+```
+Let's have a look at what we created with our sdat.
+```{r Looking at our data}
+sdat
+```
+Looks as it is supposed to, great!
+We can now start playing with msome mapping!
+
+5.11 Cartography
+```{r Plot}
+plot(sdat["richness_raw"])
+```
+
+```{r}
+plot(sdat)
+```
+Very quirky! 
+```{r Installing tmap}
+#using tmap
+install.packages("tmap")
+```
+
+```{r Bringing in tmap}
+library(tmap)
+```
+
+```{r}
+tm_shape(sdat) + 
+  tm_dots(col = "richness_raw")
+```
+Time to customize: 
+```{r Customize}
+tmap_save (filename = "Richness-map.png", 
+          width = 600, height = 600)
+```
+
+```{r Check WD}
+getwd()
+```
+"/Users/ellanapierce/Desktop/Data_Science/Updated_DataScience"
+Show in New Window
+
+For the next step, since we are working with maps, we will now need to add in polygons - which from our experience: We know are stored as shapefiles!
+```{r}
+aus <- st_read("/Users/ellanapierce/Desktop/Data_Science/Updated_DataScience/spatial-data/Aussie/Aussie.shp")
+#Reading layer `Aussie' from data source 
+```
+This took me ages! It was only basic trouble shooting and a great reminder of the attention to detail and keeping my data paths clean, with underscores/hyphens and checking the wd to makesure things are listed as I call them!
+```{r Reading in my file}
+shelf <- st_read("/Users/ellanapierce/Desktop/Data_Science/Updated_DataScience/spatial-data/Aussie/Aussie.shp")
+```
+Lets check it's all there:
+```{r Checking my shp}
+aus
+```
+Great!
+
+5.13.2 Mapping your Polygons
+```{r}
+tm_shape(shelf) + 
+  tm_polygons()
+```
+
+```{r}
+tm_shape(shelf, bbox = sdat) + 
+  tm_polygons() +
+  tm_shape(aus) + 
+  tm_polygons() + 
+  tm_shape(sdat) + 
+  tm_dots()
+```
+LOOKS GREAT! YEWW.
+
+5.14 Exploring t_map
+```{r}
+vignette('tmap-getstarted')
+```
+Let's have a learn and play!
+```{r}
+data("World")
+
+tmap_mode("view")
+
+tm_shape(World) +
+    tm_polygons("HPI")
+```
+Holy heck, this is cool. I now have an interactive world map!
+
+
